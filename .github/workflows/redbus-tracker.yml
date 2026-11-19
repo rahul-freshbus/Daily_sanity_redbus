@@ -1,22 +1,22 @@
-name: redbus-tracker
+name: bus-trackers
 
 on:
   schedule:
     # GitHub cron is in UTC. IST = UTC+5:30
-    - cron: "30 3 * * *"   # 09:00 IST
-  workflow_dispatch:        # lets you run it manually from the Actions tab
+    - cron: "30 3 * * *"   # 09:00 IST daily
+  workflow_dispatch:        # manual run from the Actions tab
 
 permissions:
   contents: write           # needed to commit the CSVs back to the repo
 
 concurrency:
-  group: redbus-tracker     # never run two at once (avoids push conflicts)
+  group: bus-trackers       # never run two at once (avoids push conflicts)
   cancel-in-progress: false
 
 jobs:
   track:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
@@ -29,14 +29,23 @@ jobs:
           pip install playwright openpyxl
           playwright install --with-deps chromium
 
-      - name: Run tracker
+      - name: Run redBus tracker
         run: xvfb-run -a python redbus_tracker.py --days-ahead 1 --headed
 
+      - name: Run AbhiBus tracker
+        if: always()        # still runs if the previous tracker failed
+        run: xvfb-run -a python abhibus_tracker.py --days-ahead 1 --headed
+
+      - name: Run Paytm tracker
+        if: always()
+        run: xvfb-run -a python paytm_tracker.py --days-ahead 1 --headed
+
       - name: Commit results
+        if: always()
         run: |
-          git config user.name "redbus-bot"
-          git config user.email "redbus-bot@users.noreply.github.com"
-          git add freshbus_redbus_*.csv
+          git config user.name "bus-bot"
+          git config user.email "bus-bot@users.noreply.github.com"
+          git add freshbus_*.csv
           git diff --cached --quiet || git commit -m "tracker run $(date -u +%Y-%m-%dT%H:%MZ)"
           git pull --rebase
           git push
