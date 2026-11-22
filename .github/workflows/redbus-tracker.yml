@@ -1,9 +1,6 @@
 name: bus-trackers
 
-on:
-  schedule:
-    # GitHub cron is in UTC. IST = UTC+5:30
-    - cron: "30 3 * * *"   # 09:00 IST daily
+on: 
   workflow_dispatch:        # manual run from the Actions tab
 
 permissions:
